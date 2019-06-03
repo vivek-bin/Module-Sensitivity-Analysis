@@ -20,6 +20,8 @@ def digestFiles(lib):
 	for fl in fileList:
 		if fl[2:4].lower() == "ms":
 			continue
+		if fl[:2].lower() != "vi":
+			continue
 		file = FA.loadFile(lib,fl)
 		c = Component(fl,file)
 		
@@ -28,10 +30,10 @@ def digestFiles(lib):
 
 	
 	
-#modLog,tagDict = digestFile("VIC3103",FA.SRCE)
+modLog,tagDict = digestFile("VIC3103",FA.SRCE)
 
-digestFiles(FA.COPY)
+#digestFiles(FA.SRCE)
 
-#for line in modLog:
-#	print(line)
+for line in modLog:
+	print(line)
 

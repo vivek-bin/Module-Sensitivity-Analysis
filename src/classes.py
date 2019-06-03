@@ -48,83 +48,18 @@ class Component:
 		self.tags[""] = Tag("")
 		self.tags[""].extendLog("creation")
 		
-		
+		tagName = ""
 		for line in self.modificationLog:
-			tagName = line[:6].strip()
+			if line[:6].strip():
+				tagName = line[:6].strip()
+			
 			tagText = line[7:]
 			if tagName not in self.tags:
 				self.tags[tagName] = Tag(tagName)
 		
 			self.tags[tagName].extendLog(tagText)
-		
-		
-	def srceOrCopy(self):		#true = srce, false = copy
-		for line in self.file:
-			if line[6:7].strip():
-				continue
-			
-			line = line[7:72].lower()
-			words = set(line.replace("."," . ").split())
-			
-			if {"pic","picture"} & words:
-				break
-				
-			if {"division","copy","section"} & words:
-				return True
-				
-		return False
-		
-		
-	def extractModificationLog2(self):
-		if self.srceOrCopy():
-			return self.extractModificationLogSrce()
-		else:
-			return self.extractModificationLogCopy()
-		
-		
-	def extractModificationLogSrce(self):
-		modificationLog = []
-		
-		for line in self.file:
-			comment = line[6:7].strip()
-			if comment != "":
-				if line[7:72].replace("*","").replace("/","").replace("\\","").strip() == "":
-					continue
-				modificationLog.append(line)
-				continue
-			
-			words = line.replace("."," . ").lower().split()
-			if "division" in words and "id" not in words and "identification" not in words:
-				break
-		
-		return modificationLog
-		
-		
-	def extractModificationLogCopy(self):
-		modificationLog = []
-		
-		nonCommentCount = 0
-		logStarted = False
-		for line in self.file:	
-			comment = line[6:7].strip()
-			if comment != "":
-				nonCommentCount = 0
-				if line[7:67] in ("*"*60,'"="*60):
-					logStarted = True
-				
-				if line[7:72].replace("*","").replace("/","").replace("\\","").strip() == "":
-					continue
-				if logStarted:
-					modificationLog.append(line)
-				continue
-			
-			nonCommentCount += 1
-			if nonCommentCount == CONST.COPY_LOG_IDENTIFIER_LIMIT:
-				break
-		
-		return modificationLog
-		
-		
+	
+	
 	def extractModificationLog(self):
 		modificationLog = []
 		
@@ -137,14 +72,12 @@ class Component:
 				if line[7:67] in ("*"*60,"="*60,"-"*60):
 					logStarted = True
 				
-				if line[7:72].replace("*","").replace("/","").replace("\\","").strip() == "":
-					continue
 				if logStarted:
 					modificationLog.append(line)
 				continue
 
 			if line[7:72].strip() == "":
-					continue
+				continue
 			
 			if logStarted:
 				break
