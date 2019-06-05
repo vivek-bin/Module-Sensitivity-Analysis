@@ -44,7 +44,8 @@ def processFiles(excelFile):
 			cP = searchLib(FA.EXPANDED,program,componentFilter="VI",searchStart=7)
 			callingPrograms[program] = [p for p in serviceCallingPrograms if p in cP]
 			calledPrograms[program] = findCalledServices(program)
-		
+			if program in calledPrograms[program]:
+				calledPrograms[program].remove(program)
 		
 		excelFile.write(xli,0,fl)
 		excelFile.write(xli,1,"\n".join(d["REMARKS"]))
@@ -205,7 +206,7 @@ def findCalledServices(fileName):
 		serviceCopyList = searchLib(FA.COPY,serviceTag,componentFilter="VIFP0",searchStart=7,searchEnd=12)
 		serviceProgramList = []
 		for service in serviceCopyList:
-			serviceProgramList.append(searchLib(FA.SRCE,service,componentFilter="VI",searchStart=7))
+			serviceProgramList.extend(searchLib(FA.SRCE,service,componentFilter="VI",searchStart=7))
 			
 		for program in serviceProgramList:
 			for line in file:
