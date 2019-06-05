@@ -5,10 +5,12 @@ class Component:
 		self.file = file
 		self.componentName = componentName
 		self.modificationLog = ""
+		self.modificationLogPartitions = []
 		self.tags = {}
 		self.createdTag = ""
 		
 		self.modificationLog = self.extractModificationLog()
+		self.distributeModLog()
 		self.distributeTagLines()
 		
 		
@@ -33,7 +35,7 @@ class Component:
 			except KeyError:
 				self.tags[tag1] = Tag(tag1)
 				self.tags[tag1].extendModifications(line)
-				print("tag not found in modification log!  " + self.componentName + " " +tag1)
+				#print("tag not found in modification log!  " + self.componentName + " " +tag1)
 			
 			if commented and tag1 != self.createdTag:
 				if line[7:8].strip() == "":
@@ -69,7 +71,7 @@ class Component:
 			comment = line[6:7].strip()
 			if comment != "":
 				nonCommentCount = 0
-				if line[7:67] in ("*"*60,"="*60,"-"*60):
+				if line[7:60] in ("*"*53,"="*53,"-"*53):
 					logStarted = True
 				
 				if logStarted:
@@ -88,6 +90,16 @@ class Component:
 		
 		return modificationLog
 		
+	
+	def distributeModLog(self):
+		block = []
+		for line in self.modificationLog:
+			if line[7:60] in ("*"*53,"="*53,"-"*53):
+				if block:
+					self.modificationLogPartitions.append(block)
+					block = []
+			else:
+				block.append(line)
 		
 		
 		

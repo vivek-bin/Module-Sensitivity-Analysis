@@ -1,7 +1,6 @@
 import fileaccess as FA
 from classes import Component
 
-
 	
 def digestFile(componentName,lib):
 	FA.openLib(lib)
@@ -13,27 +12,35 @@ def digestFile(componentName,lib):
 	return c.modificationLog, c.tags
 
 	
-def digestFiles(lib):
+def digestFiles(lib,excelFile):
 	FA.openLib(lib)
-	
+	xli = 0
 	fileList = FA.fileListLib(lib)
-	for fl in fileList:
-		if fl[2:4].lower() == "ms":
-			continue
-		if fl[:2].lower() != "vi":
+	for i,fl in enumerate(fileList):
+		if not fl.lower().startswith("vifp0"):
 			continue
 		file = FA.loadFile(lib,fl)
 		c = Component(fl,file)
 		
 	FA.closeLib(lib)
-	#return c.modificationLog, c.tags
-
 	
-	
-modLog,tagDict = digestFile("VIC3103",FA.SRCE)
+def digestFiles(lib,excelFile):
+	FA.openLib(lib)
+	xli = 0
+	fileList = FA.fileListLib(lib)
+	for i,fl in enumerate(fileList):
+		if not fl.lower().startswith("vifp0"):
+			continue
+		file = FA.loadFile(lib,fl)
+		c = Component(fl,file)
+		
+		
+	FA.closeLib(lib)
 
-#digestFiles(FA.SRCE)
+def mainFunc():
+	digestFiles(FA.COPY,sheet1)
 
-for line in modLog:
-	print(line)
+
+mainFunc()
+
 
