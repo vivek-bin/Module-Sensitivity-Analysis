@@ -1,0 +1,23 @@
+if
+evaluate
+else
+when
+perform
+	thru
+	until
+	times
+
+
+
+
+.
+else
+when
+end-evaluate
+end-if
+end-perform
+
+goback
+stop run
+exit program
+exec cics ...... return

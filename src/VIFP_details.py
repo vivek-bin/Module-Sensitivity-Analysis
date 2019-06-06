@@ -9,11 +9,11 @@ def processFiles(excelFile):
 	FA.openLib(FA.COPY)
 	fileList = FA.fileListLib(FA.COPY)
 	FA.closeLib(FA.COPY)
-	fileList = [f for f in fileList if f.startswith("VIFP0K02")]
+	fileList = [f for f in fileList if f.startswith("VIFP0")]
 	
 	
 	xli = 0
-	for i,fl in enumerate(fileList):
+	for fl in fileList:
 		FA.openLib(FA.COPY)
 		file = FA.loadFile(FA.COPY,fl)
 		FA.closeLib(FA.COPY)
@@ -27,11 +27,7 @@ def processFiles(excelFile):
 				break
 		
 		
-		try:
-			serviceName = findServiceNameVIFP(file)
-		except:
-			print(fl)
-			raise Exception
+		serviceName = findServiceNameVIFP(file)
 		serviceCallingPrograms = searchLib(FA.EXPANDED,"PERFORM "+serviceName+"-",componentFilter="VI",searchStart=11)
 		
 		programs = searchLib(FA.SRCE,fl,componentFilter="VI",searchStart=7)
@@ -53,8 +49,9 @@ def processFiles(excelFile):
 		excelFile.write(xli,3,"\n".join(d["CLASS"]))
 		for j,program in enumerate(programs):
 			excelFile.write(xli,4,program)
-			excelFile.write(xli,5,"\n".join(callingPrograms[program]))
-			excelFile.write(xli,6,"\n".join(calledPrograms[program]))
+			excelFile.write(xli,5,"\n".join(programCallingCopy[program]))
+			excelFile.write(xli,6,"\n".join(callingPrograms[program]))
+			excelFile.write(xli,7,"\n".join(calledPrograms[program]))
 			
 			if j < len(programs) - 1:
 				xli += 1
@@ -116,17 +113,15 @@ def searchLib(lib,text,componentFilter="",skipCommented=True,concatSpaces=True,s
 	FA.openLib(lib)
 	fileList = FA.fileListLib(lib)
 	fileList = [f for f in fileList if f.startswith(componentFilter)]
-	for i,fl in enumerate(fileList):
+	for fl in fileList:
 		file = FA.loadFile(lib,fl)
+		if skipCommented:
+			file = [line[searchStart:searchEnd+1] for line in file if not line[6:7].strip()]
+		
+		if concatSpaces:
+			file = [" ".join(line.split()) for line in file]
+		
 		for line in file:
-			if skipCommented and line[6:7] in ("*","/","\\"):
-				continue
-				
-			line = line[searchStart:searchEnd+1]
-			
-			if concatSpaces:
-				line = " ".join(line.split())
-			
 			if text in line:
 				componentList.append(fl)
 				break
@@ -138,18 +133,21 @@ def searchLib(lib,text,componentFilter="",skipCommented=True,concatSpaces=True,s
 
 def findServiceNameVIFP(file):
 	for line in file:
-		if line[6:7] in ("*","/","\\"):
+		if not line[6:7].strip():
 			continue
 			
 		if line[7:11].strip():
 			return line[7:11]
-			
-	raise Exception
+	if len(file) < 50:
+		print("unusual VIFP")
+		return "!!!!"
+	else:
+		raise Exception
 
 
 def findServiceNameVIFW(file):
 	for line in file:
-		if line[6:7] in ("*","/","\\"):
+		if not line[6:7].strip():
 			continue
 		
 		if line[7:].strip():
@@ -167,7 +165,7 @@ def findCalledServices(fileName):
 	
 	FWList = []
 	for line in file:
-		if line[6:7] in ("*","/","\\"):
+		if not line[6:7].strip():
 			continue
 		
 		words = line[7:72].replace("."," . ").split()
@@ -192,7 +190,7 @@ def findCalledServices(fileName):
 	for serviceTag in servicesList:
 		flag = False
 		for line in file:
-			if line[6:7] in ("*","/","\\"):
+			if not line[6:7].strip():
 				continue
 			
 			line = " ".join(line[7:72].split())
@@ -210,7 +208,7 @@ def findCalledServices(fileName):
 			
 		for program in serviceProgramList:
 			for line in file:
-				if line[6:7] in ("*","/","\\"):
+				if not line[6:7].strip():
 					continue
 				
 				line = line[7:72]
