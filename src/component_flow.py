@@ -6,7 +6,8 @@ class Component:
 		self.name = name
 		self.calling = calling
 		self.called = called
-
+		self.paths = []
+		self.found = False
 
 def readExcel():
 	wb = xlrd.open_workbook("vifp0 details.xls") 
@@ -47,7 +48,7 @@ def findPaths(source,target):
 	paths = [[source]]
 	while(paths):
 		path = paths.pop(0)
-		tempPaths = [path+[c] for c in path[-1].called]
+		tempPaths = extendPath(path)
 		print(len(paths))
 		for tempPath in tempPaths:
 			if isPathFinished(tempPath,source,target):
@@ -61,6 +62,17 @@ def findPaths(source,target):
 	
 	
 	return relevantPaths
+	
+def extendPath(path):
+	newPaths = []
+	for c in path[-1].called:
+		c.paths.append(path)
+		if not c.found:
+			c.found = True
+			newPaths.append(path + [c])
+	
+	return newPaths
+	
 	
 	
 def isPathFinished(path,source,target):
