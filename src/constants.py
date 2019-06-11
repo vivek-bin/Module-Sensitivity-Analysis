@@ -4,14 +4,13 @@ from os.path import dirname
 
 #paths
 PATH = dirname(dirname(dirname(abspath(getsourcefile(lambda:0))))) + "/"
+PROJECT = dirname(dirname(abspath(getsourcefile(lambda:0)))) + "/"
 
 COBOLLIB = "MTP.CCCV000"
 COBOLLIBHEAD = COBOLLIB[:3]
 
 COBOLLIBPATH = PATH + COBOLLIBHEAD + "/"
 ZIPLIBPATH = PATH + COBOLLIBHEAD + " ZIP/"
-
-PROJECT = PATH + "PROJECT/"
 
 SRCELIB = COBOLLIBPATH + "SRCELIB/"
 COPYLIB = COBOLLIBPATH + "COPYLIB/"
