@@ -5,23 +5,25 @@ from os.path import dirname
 #paths
 PATH = dirname(dirname(dirname(abspath(getsourcefile(lambda:0))))) + "/"
 
-MTP = PATH + "MTP/"
-MTPZIP = PATH + "MTP ZIP/"
+COBOLLIB = "MTP.CCCV000"
+COBOLLIBHEAD = COBOLLIB[:3]
+
+COBOLLIBPATH = PATH + COBOLLIBHEAD + "/"
+ZIPLIBPATH = PATH + COBOLLIBHEAD + " ZIP/"
+
 PROJECT = PATH + "PROJECT/"
 
-SRCELIB = MTP + "SRCELIB/"
-COPYLIB = MTP + "COPYLIB/"
-INCLUDE = MTP + "INCLUDE/"
-EXPANDED = MTP + "EXPANDED/"
-PROCESSING = MTP + "PROCESSING/"
-TREES = MTP + "TREES/"
+SRCELIB = COBOLLIBPATH + "SRCELIB/"
+COPYLIB = COBOLLIBPATH + "COPYLIB/"
+INCLUDE = COBOLLIBPATH + "INCLUDE/"
+EXPANDED = COBOLLIBPATH + "EXPANDED/"
+TREES = COBOLLIBPATH + "TREES/"
 
-SRCEZIP = MTPZIP + "SRCELIB.zip"
-COPYZIP = MTPZIP + "COPYLIB.zip"
-INCZIP = MTPZIP + "INCLUDE.zip"
-EXPANDEDZIP = MTPZIP + "EXPANDED.zip"
-PROCESSINGZIP = MTPZIP + "PROCESSING.zip"
-TREESZIP = MTPZIP + "TREES.zip"
+SRCEZIP = ZIPLIBPATH + "SRCELIB.zip"
+COPYZIP = ZIPLIBPATH + "COPYLIB.zip"
+INCZIP = ZIPLIBPATH + "INCLUDE.zip"
+EXPANDEDZIP = ZIPLIBPATH + "EXPANDED.zip"
+TREESZIP = ZIPLIBPATH + "TREES.zip"
 
 DATA = PROJECT + "data/"
 
@@ -29,5 +31,31 @@ DATA = PROJECT + "data/"
 ZEROPAD = 8
 
 
-LOG_IDENTIFIER_LIMIT = 4
+#flowchart values
+TOOLTIPSIZE = 50
+
+NPLOCATION = "C:\\Program Files\\Notepad++\\notepad++.exe"
+
+BRANCHSPACE = 30
+
+FONT = ("League Gothic",9,"bold")
+TOOLTIPFONT = ("Times New Roman",7,"normal")
+
+ICONS = PROJECT + "icons/"
+
+
+FLOWCUSTOM = DATA + "flowchart-customize/"
+def loadCustomization(inputFileName):
+	f = []
+	try:
+		iFile = open(FLOWCUSTOM+inputFileName+".txt")
+
+		f = [l.strip().lower() for l in iFile]
+		iFile.close()
+	except IOError:
+		f = []
+	return f
+
+IGNOREDMODULES = loadCustomization("ignore-program")
+IGNOREDPARAS = loadCustomization("ignore-para")
 

@@ -1,4 +1,6 @@
 import constants as CONST
+LOG_IDENTIFIER_LIMIT = 4
+
 
 class Component:
 	def __init__(self,componentName,file):
@@ -85,7 +87,7 @@ class Component:
 				break
 				
 			nonCommentCount += 1
-			if nonCommentCount == CONST.LOG_IDENTIFIER_LIMIT:
+			if nonCommentCount == LOG_IDENTIFIER_LIMIT:
 				break
 		
 		return modificationLog

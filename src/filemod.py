@@ -259,13 +259,9 @@ def writeProcessingExpand(componentName):
 		if componentName[2:4].lower() != "ms":
 			print("not COBOL:" + componentName)
 		fileaccess.writeFile(fileaccess.EXPANDED,componentName,src)
-		#fileaccess.writeFile(fileaccess.PROCESSING,componentName,src)
 	else:
 		expandedSrc = expandFile(src)
-		processingSrc = processingFile(expandedSrc)
-		processingSrc = processingFileClean(processingSrc)
 		fileaccess.writeFile(fileaccess.EXPANDED,componentName,expandedSrc)
-		fileaccess.writeFile(fileaccess.PROCESSING,componentName,processingSrc)
 	
 def getIncludedCopybooks(inputFile):
 	file = []
@@ -317,7 +313,6 @@ def writeAllProcessingExpand(start=0,end=999999):
 	fileaccess.openLib(fileaccess.COPY)
 	fileaccess.openLib(fileaccess.INC)
 	fileaccess.openLib(fileaccess.EXPANDED,"w")
-	fileaccess.openLib(fileaccess.PROCESSING,"w")
 	
 	l = fileaccess.fileListLib(fileaccess.SRCE)
 	processingList = l[start:end]
@@ -329,7 +324,6 @@ def writeAllProcessingExpand(start=0,end=999999):
 	fileaccess.closeLib(fileaccess.COPY)
 	fileaccess.closeLib(fileaccess.INC)
 	fileaccess.closeLib(fileaccess.EXPANDED)
-	fileaccess.closeLib(fileaccess.PROCESSING)
 
 		
 	print(time.time() - startTime)
