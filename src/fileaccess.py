@@ -2,7 +2,6 @@ import zipfile
 import constants as CONST
 import pickle
 import os
-from nodes import *
 
 SRCE = 0
 COPY = 1
