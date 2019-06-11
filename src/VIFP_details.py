@@ -1,64 +1,137 @@
 import fileaccess as FA
 from classes import Component
 
-import xlwt 
+import time
+import threading
 from xlwt import Workbook 
 
+FA.openLib(FA.COPY)
+fileList = FA.fileListLib(FA.COPY)
+fileList = [f for f in fileList if f.startswith("VIF")]
+COPYLIB = {}
+for fl in fileList:
+	COPYLIB[fl] = FA.loadFile(FA.COPY,fl)
+FA.closeLib(FA.COPY)
 
-def processFiles(excelFile):
-	FA.openLib(FA.COPY)
-	fileList = FA.fileListLib(FA.COPY)
-	FA.closeLib(FA.COPY)
-	fileList = [f for f in fileList if f.startswith("VIFP0")]
+
+FA.openLib(FA.SRCE)
+fileList = FA.fileListLib(FA.SRCE)
+fileList = [f for f in fileList if f.startswith("VI")]
+SRCELIB = {}
+for fl in fileList:
+	SRCELIB[fl] = FA.loadFile(FA.SRCE,fl)
+FA.closeLib(FA.SRCE)
+
+
+FA.openLib(FA.EXPANDED)
+fileList = FA.fileListLib(FA.EXPANDED)
+fileList = [f for f in fileList if f.startswith("VI")]
+EXPANDED = {}
+for fl in fileList:
+	EXPANDED[fl] = FA.loadFile(FA.EXPANDED,fl)
+FA.closeLib(FA.EXPANDED)
+
+
+def processFiles(fileList,excelName,lock):
+	processedDict = {}
+	startTime = time.time()
 	
+	for fileName in fileList:
+		processFile(fileName,processedDict)
+	
+	with lock:
+		writeExcel(processedDict,excelName)
+	
+	
+	print(str(time.time() - startTime()))
+	return processedDict
+
+
+def processFile(fileName,processedDict):
+	global COPYLIB,SRCELIB,EXPANDED
+	
+	file = COPYLIB[fileName]
+	
+	if len(file)<30:
+		print("unusual VIFP")
+		return False
+	
+	c = Component(fileName,file)
+	print("loaded "+c.componentName)
+	
+	for logText in c.modificationLogPartitions:
+		if len(logText) > 1:
+			c.details = digestModLog(logText)
+			break
+	
+	
+	c.serviceName = findServiceNameVIFP(c.file)
+	serviceCallingPrograms = searchLib(EXPANDED,"PERFORM "+c.serviceName+"-",componentFilter="VI",searchStart=11)
+	
+	c.programs = searchLib(SRCELIB,c.componentName,componentFilter="VI",searchStart=7)
+	
+	c.programCallingCopy = {}
+	c.callingPrograms = {}
+	c.calledPrograms = {}
+	for program in c.programs:
+		c.programCallingCopy[program] = searchLib(COPYLIB,program,componentFilter="VIFP",searchStart=7)
+		
+		c.callingPrograms[program] = []
+		#cP = searchLib(EXPANDED,program,componentFilter="VI",searchStart=7)
+		#c.callingPrograms[program] = [p for p in serviceCallingPrograms if p in cP]
+		#instead of searching entire EXPANDED, search just relevant components
+		for serviceProgram in serviceCallingPrograms:
+			file = EXPANDED[serviceProgram]
+			for line in file:
+				if line[6:7].strip():
+					continue
+				if program in line:
+					c.callingPrograms[program].append(serviceProgram)
+					break
+		
+		
+		c.calledPrograms[program] = findCalledServices(program)
+		if program in c.calledPrograms[program]:
+			c.calledPrograms[program].remove(program)
+		if program in c.callingPrograms[program]:
+			c.callingPrograms[program].remove(program)
+		
+	processedDict[fileName] = c
+	
+	return c
+
+	
+def writeExcel(processedDict,name):
+	# Workbook is created 
+	wb = Workbook() 
+	# add_sheet is used to create sheet. 
+	excelFile = wb.add_sheet('Sheet 1') 
 	
 	xli = 0
-	for fl in fileList:
-		FA.openLib(FA.COPY)
-		file = FA.loadFile(FA.COPY,fl)
-		FA.closeLib(FA.COPY)
-		
-		c = Component(fl,file)
-		print("loaded "+fl)
-		
-		for logText in c.modificationLogPartitions:
-			if len(logText) > 1:
-				d = digestModLog(logText)
-				break
-		
-		
-		serviceName = findServiceNameVIFP(file)
-		serviceCallingPrograms = searchLib(FA.EXPANDED,"PERFORM "+serviceName+"-",componentFilter="VI",searchStart=11)
-		
-		programs = searchLib(FA.SRCE,fl,componentFilter="VI",searchStart=7)
-		programCallingCopy = {}
-		callingPrograms = {}
-		calledPrograms = {}
-		for program in programs:
-			programCallingCopy[program] = searchLib(FA.COPY,program,componentFilter="VIFP",searchStart=7)
-			
-			cP = searchLib(FA.EXPANDED,program,componentFilter="VI",searchStart=7)
-			callingPrograms[program] = [p for p in serviceCallingPrograms if p in cP]
-			calledPrograms[program] = findCalledServices(program)
-			if program in calledPrograms[program]:
-				calledPrograms[program].remove(program)
-		
-		excelFile.write(xli,0,fl)
-		excelFile.write(xli,1,"\n".join(d["REMARKS"]))
-		excelFile.write(xli,2,"\n".join(d["DOMAIN"]))
-		excelFile.write(xli,3,"\n".join(d["CLASS"]))
-		for j,program in enumerate(programs):
+	for fileName in sorted(processedDict.keys()):
+		c = processedDict[fileName]
+		excelFile.write(xli,0,c.componentName)
+		excelFile.write(xli,1,"\n".join(c.details["REMARKS"]))
+		excelFile.write(xli,2,"\n".join(c.details["DOMAIN"]))
+		excelFile.write(xli,3,"\n".join(c.details["CLASS"]))
+		for j,program in enumerate(c.programs):
+			if j:
+				excelFile.write(xli,0,c.componentName)
+				excelFile.write(xli,1,"\n".join(c.details["REMARKS"]))
+				excelFile.write(xli,2,"\n".join(c.details["DOMAIN"]))
+				excelFile.write(xli,3,"\n".join(c.details["CLASS"]))
 			excelFile.write(xli,4,program)
-			excelFile.write(xli,5,"\n".join(programCallingCopy[program]))
-			excelFile.write(xli,6,"\n".join(callingPrograms[program]))
-			excelFile.write(xli,7,"\n".join(calledPrograms[program]))
+			excelFile.write(xli,5,"\n".join(c.programCallingCopy[program]))
+			excelFile.write(xli,6,"\n".join(c.callingPrograms[program]))
+			excelFile.write(xli,7,"\n".join(c.calledPrograms[program]))
 			
-			if j < len(programs) - 1:
+			if j < len(c.programs) - 1:
 				xli += 1
-		
 		
 		xli += 1
 		
+	
+	wb.save(name) 
 
 
 def digestModLog(text):
@@ -110,11 +183,10 @@ def digestModLog(text):
 def searchLib(lib,text,componentFilter="",skipCommented=True,concatSpaces=True,searchStart=0,searchEnd=999):
 	componentList = []
 	
-	FA.openLib(lib)
-	fileList = FA.fileListLib(lib)
+	fileList = lib.keys()
 	fileList = [f for f in fileList if f.startswith(componentFilter)]
 	for fl in fileList:
-		file = FA.loadFile(lib,fl)
+		file = lib[fl]
 		if skipCommented:
 			file = [line[searchStart:searchEnd+1] for line in file if not line[6:7].strip()]
 		
@@ -126,46 +198,41 @@ def searchLib(lib,text,componentFilter="",skipCommented=True,concatSpaces=True,s
 				componentList.append(fl)
 				break
 		
-	FA.closeLib(lib)
 	
 	return componentList
 
 
 def findServiceNameVIFP(file):
 	for line in file:
-		if not line[6:7].strip():
+		if line[6:7].strip():
 			continue
 			
 		if line[7:11].strip():
 			return line[7:11]
-	if len(file) < 50:
-		print("unusual VIFP")
-		return "!!!!"
-	else:
-		raise Exception
+	
+	raise Exception
 
 
 def findServiceNameVIFW(file):
 	for line in file:
-		if not line[6:7].strip():
+		if line[6:7].strip():
 			continue
 		
-		if line[7:].strip():
-			words = line[7:].split()
-			if words[0].isnumeric():
+		words = line[7:].split()
+		if words and words[0].isnumeric():
 				return words[1][1:5]
 			
 	raise Exception
 
 	
 def findCalledServices(fileName):
-	FA.openLib(FA.SRCE)
-	file = FA.loadFile(FA.SRCE,fileName)
-	FA.closeLib(FA.SRCE)
+	global COPYLIB,SRCELIB,EXPANDED
+	
+	file = SRCELIB[fileName]
 	
 	FWList = []
 	for line in file:
-		if not line[6:7].strip():
+		if line[6:7].strip():
 			continue
 		
 		words = line[7:72].replace("."," . ").split()
@@ -176,21 +243,17 @@ def findCalledServices(fileName):
 	
 	
 	servicesList = []	
-	FA.openLib(FA.COPY)
 	for f in FWList:
-		copyFile = FA.loadFile(FA.COPY,f)
+		copyFile = COPYLIB[f]
 		servicesList.append(findServiceNameVIFW(copyFile))
-	FA.closeLib(FA.COPY)
 	
-	FA.openLib(FA.EXPANDED)
-	file = FA.loadFile(FA.EXPANDED,fileName)
-	FA.closeLib(FA.EXPANDED)
+	file = EXPANDED[fileName]
 	
 	programs = []
 	for serviceTag in servicesList:
 		flag = False
 		for line in file:
-			if not line[6:7].strip():
+			if line[6:7].strip():
 				continue
 			
 			line = " ".join(line[7:72].split())
@@ -201,14 +264,14 @@ def findCalledServices(fileName):
 			continue
 		
 		
-		serviceCopyList = searchLib(FA.COPY,serviceTag,componentFilter="VIFP0",searchStart=7,searchEnd=12)
+		serviceCopyList = searchLib(COPYLIB,serviceTag,componentFilter="VIFP0",searchStart=7,searchEnd=12)
 		serviceProgramList = []
 		for service in serviceCopyList:
-			serviceProgramList.extend(searchLib(FA.SRCE,service,componentFilter="VI",searchStart=7))
+			serviceProgramList.extend(searchLib(SRCELIB,service,componentFilter="VI",searchStart=7))
 			
 		for program in serviceProgramList:
 			for line in file:
-				if not line[6:7].strip():
+				if line[6:7].strip():
 					continue
 				
 				line = line[7:72]
@@ -218,21 +281,26 @@ def findCalledServices(fileName):
 	
 	return programs
 
-	
-	
-	
+
+
 	
 def mainFunc():
-	# Workbook is created 
-	wb = Workbook() 
-	# add_sheet is used to create sheet. 
-	sheet1 = wb.add_sheet('Sheet 1') 
-
-	processFiles(sheet1)
-
-
-	wb.save('vifp0 details.xls') 
-
+	global COPYLIB
+	
+	fileList = COPYLIB.keys()
+	fileList = [f for f in fileList if f.startswith("VIFP0")]
+	threadList = []
+	
+	lock = threading.Lock()
+	
+	threads = 3
+	for i in range(threads):
+		temp = [f for j,f in enumerate(fileList) if j%threads == i]
+		newThread = threading.Thread(target=processFiles, args=(temp,"vifp0 details"+str(i)+".xls",lock))
+		newThread.start()
+		threadList.append(newThread)
+		#pd = processFiles(temp,"vifp0 details"+i+".xls",lock)
+		
 
 mainFunc()
 

@@ -1,14 +1,18 @@
 import xlrd
 import time
+import sys
 
 class Component:
-	def __init__(self, name, calling, called):
+	def __init__(self, name, calling=[], called=[]):
 		self.name = name
 		self.calling = calling
 		self.called = called
 		self.paths = []
 		self.found = False
-
+	def __str__(self):
+		return self.name
+	
+	
 def readExcel():
 	wb = xlrd.open_workbook("vifp0 details.xls") 
 	sheet = wb.sheet_by_index(0) 
@@ -25,14 +29,21 @@ def readExcel():
 			graph[name] = Component(name=name,calling=calling,called=called)
 		
 	modules = set()
-	for componentName in graph.keys():
-		calling = [c for c in graph[componentName].calling if c in graph.keys()]
-		calling = [graph[name] for name in calling]
-		
-		called = [c for c in graph[componentName].called if c in graph.keys()]
-		called = [graph[name] for name in called]
-		
+	components = tuple(graph.keys())
+	for componentName in components:
+		calling = []
+		for name in graph[componentName].calling:
+			if name not in graph.keys():
+				graph[name] = Component(name=name)
+			calling.append(graph[name])
 		graph[componentName].calling = calling
+		
+		
+		called = []
+		for name in graph[componentName].called:
+			if name not in graph.keys():
+				graph[name] = Component(name=name)
+			called.append(graph[name])
 		graph[componentName].called = called
 	
 	
@@ -49,15 +60,15 @@ def findPaths(source,target):
 	while(paths):
 		path = paths.pop(0)
 		tempPaths = extendPath(path)
-		print(len(paths))
 		for tempPath in tempPaths:
 			if isPathFinished(tempPath,source,target):
 				if tempPath[-1] in (source,target):
 					if source in tempPath and target in tempPath:
+						target.found = False
 						relevantPaths.append(tempPath)
-						#print("->".join([c.name for c in path]))
+						#print("->".join([str(c) for c in path]))
 			else:
-				#print(" ".join([c.name for c in tempPath]))
+				#print(" ".join([str(c) for c in tempPath]))
 				paths.append(tempPath)
 	
 	
@@ -66,7 +77,7 @@ def findPaths(source,target):
 def extendPath(path):
 	newPaths = []
 	for c in path[-1].called:
-		c.paths.append(path)
+		c.paths.append(path + [c])
 		if not c.found:
 			c.found = True
 			newPaths.append(path + [c])
@@ -91,12 +102,16 @@ def isPathFinished(path,source,target):
 	
 def main(prog1,prog2):
 	relevantPaths = findPaths(prog1,prog2) + findPaths(prog2,prog1)
-	relevantPaths = ["->".join([c.name for c in path]) for path in relevantPaths]
+	relevantPaths = ["->".join([str(c) for c in path]) for path in relevantPaths]
 	return relevantPaths
 	
-expandedPaths = main("VIC3I13","VIC3B88")
-for path in expandedPaths:
-	print(path)
+	
+if __name__ == "__main__":
+	c1 = sys.argv[1]
+	c2 = sys.argv[2]
+	expandedPaths = main(c1,c2)#"VIB3248","VIB3932")
+	for path in expandedPaths:
+		print(path)
 	
 	
 	
