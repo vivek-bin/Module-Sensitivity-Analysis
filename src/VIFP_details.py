@@ -5,6 +5,12 @@ import time
 import threading
 from xlwt import Workbook 
 
+FILE_LEN_MIN = 30
+FILE_LEN_MAX = 9999999
+FIND_CALLING = True
+FIND_CALLED = True
+THREADS = 1
+
 FA.openLib(FA.COPY)
 fileList = FA.fileListLib(FA.COPY)
 fileList = [f for f in fileList if f.startswith("VIF")]
@@ -43,16 +49,17 @@ def processFiles(fileList,excelName,lock):
 		writeExcel(processedDict,excelName)
 	
 	
-	print(str(time.time() - startTime()))
+	print(str(time.time() - startTime))
 	return processedDict
 
 
 def processFile(fileName,processedDict):
 	global COPYLIB,SRCELIB,EXPANDED
+	global FILE_LEN_MIN,FILE_LEN_MAX,FIND_CALLING,FIND_CALLED
 	
 	file = COPYLIB[fileName]
 	
-	if len(file)<30:
+	if len(file)<FILE_LEN_MIN or len(file)>FILE_LEN_MAX:
 		print("unusual VIFP")
 		return False
 	
@@ -64,37 +71,44 @@ def processFile(fileName,processedDict):
 			c.details = digestModLog(logText)
 			break
 	
-	
 	c.serviceName = findServiceNameVIFP(c.file)
-	serviceCallingPrograms = searchLib(EXPANDED,"PERFORM "+c.serviceName+"-",componentFilter="VI",searchStart=11)
-	
 	c.programs = searchLib(SRCELIB,c.componentName,componentFilter="VI",searchStart=7)
 	
 	c.programCallingCopy = {}
 	c.callingPrograms = {}
 	c.calledPrograms = {}
 	for program in c.programs:
+		c.programCallingCopy[program] = []
+		c.callingPrograms[program] = []
+		c.calledPrograms[program] = []
+	
+	
+	if FIND_CALLING:
+		if c.serviceName:
+			serviceCallingPrograms = searchLib(EXPANDED,"PERFORM "+c.serviceName+"-",componentFilter="VI",searchStart=11)
+		else:
+			serviceCallingPrograms = EXPANDED.keys()
+		
+	for program in c.programs:
 		c.programCallingCopy[program] = searchLib(COPYLIB,program,componentFilter="VIFP",searchStart=7)
 		
-		c.callingPrograms[program] = []
-		#cP = searchLib(EXPANDED,program,componentFilter="VI",searchStart=7)
-		#c.callingPrograms[program] = [p for p in serviceCallingPrograms if p in cP]
-		#instead of searching entire EXPANDED, search just relevant components
-		for serviceProgram in serviceCallingPrograms:
-			file = EXPANDED[serviceProgram]
-			for line in file:
-				if line[6:7].strip():
-					continue
-				if program in line:
-					c.callingPrograms[program].append(serviceProgram)
-					break
+		if FIND_CALLING:
+			#instead of searching entire EXPANDED, search just relevant components
+			for serviceProgram in serviceCallingPrograms:
+				file = EXPANDED[serviceProgram]
+				for line in file:
+					if line[6:7].strip():
+						continue
+					if program in line:
+						c.callingPrograms[program].append(serviceProgram)
+						break
+			if program in c.callingPrograms[program]:
+				c.callingPrograms[program].remove(program)
 		
-		
-		c.calledPrograms[program] = findCalledServices(program)
-		if program in c.calledPrograms[program]:
-			c.calledPrograms[program].remove(program)
-		if program in c.callingPrograms[program]:
-			c.callingPrograms[program].remove(program)
+		if FIND_CALLED:	
+			c.calledPrograms[program] = findCalledServices(program)
+			if program in c.calledPrograms[program]:
+				c.calledPrograms[program].remove(program)
 		
 	processedDict[fileName] = c
 	
@@ -203,6 +217,9 @@ def searchLib(lib,text,componentFilter="",skipCommented=True,concatSpaces=True,s
 
 
 def findServiceNameVIFP(file):
+	if len(file)<30:
+		return ""
+	
 	for line in file:
 		if line[6:7].strip():
 			continue
@@ -285,7 +302,7 @@ def findCalledServices(fileName):
 
 	
 def mainFunc():
-	global COPYLIB
+	global COPYLIB,THREADS
 	
 	fileList = COPYLIB.keys()
 	fileList = [f for f in fileList if f.startswith("VIFP0")]
@@ -293,13 +310,11 @@ def mainFunc():
 	
 	lock = threading.Lock()
 	
-	threads = 3
-	for i in range(threads):
-		temp = [f for j,f in enumerate(fileList) if j%threads == i]
+	for i in range(THREADS):
+		temp = [f for j,f in enumerate(fileList) if j%THREADS == i]
 		newThread = threading.Thread(target=processFiles, args=(temp,"vifp0 details"+str(i)+".xls",lock))
 		newThread.start()
 		threadList.append(newThread)
-		#pd = processFiles(temp,"vifp0 details"+i+".xls",lock)
 		
 
 mainFunc()
