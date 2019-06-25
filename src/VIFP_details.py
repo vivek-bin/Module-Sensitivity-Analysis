@@ -279,7 +279,7 @@ def findCalledServices(fileName):
 				break
 		if not flag:
 			continue
-		
+		print(serviceTag)
 		
 		serviceCopyList = searchLib(COPYLIB,serviceTag,componentFilter="VIFP0",searchStart=7,searchEnd=12)
 		serviceProgramList = []
@@ -305,7 +305,7 @@ def mainFunc():
 	global COPYLIB,THREADS
 	
 	fileList = COPYLIB.keys()
-	fileList = [f for f in fileList if f.startswith("VIFP0")]
+	fileList = [f for f in fileList if f.startswith("VIFP0N06")]
 	threadList = []
 	
 	lock = threading.Lock()
