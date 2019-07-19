@@ -1,5 +1,6 @@
 import fileaccess as FA
 from classes import Component
+import constants as CONST
 
 import time
 import threading
@@ -107,8 +108,6 @@ def processFile(fileName,processedDict):
 		
 		if FIND_CALLED:	
 			c.calledPrograms[program] = findCalledServices(program)
-			if program in c.calledPrograms[program]:
-				c.calledPrograms[program].remove(program)
 		
 	processedDict[fileName] = c
 	
@@ -266,7 +265,7 @@ def findCalledServices(fileName):
 	
 	file = EXPANDED[fileName]
 	
-	programs = []
+	programs = set()
 	for serviceTag in servicesList:
 		flag = False
 		for line in file:
@@ -279,29 +278,34 @@ def findCalledServices(fileName):
 				break
 		if not flag:
 			continue
-		print(serviceTag)
 		
 		serviceCopyList = searchLib(COPYLIB,serviceTag,componentFilter="VIFP0",searchStart=7,searchEnd=12)
 		serviceProgramList = []
 		for service in serviceCopyList:
 			serviceProgramList.extend(searchLib(SRCELIB,service,componentFilter="VI",searchStart=7))
 			
-		for program in serviceProgramList:
-			for line in file:
-				if line[6:7].strip():
-					continue
-				
-				line = line[7:72]
+		
+		for line in file:
+			if line[6:7].strip():
+				continue
+			
+			line = line[7:72]
+			for program in serviceProgramList:
 				if program in line:
-					programs.append(program)
+					programs.add(program)
+					serviceProgramList.remove(program)
 					break
+			
 	
-	return programs
+	if fileName in programs:
+		programs.remove(fileName)
+	
+	return list(programs)
 
 
 
 	
-def mainFunc():
+def getVIFPDetails():
 	global COPYLIB,THREADS
 	
 	fileList = COPYLIB.keys()
@@ -317,5 +321,30 @@ def mainFunc():
 		threadList.append(newThread)
 		
 
-mainFunc()
+def getSPICalled():
+	SPIList = []
+	
+	try:
+		iFile = open(CONST.DATA+"SPIs.txt")
+		SPIList = [l.strip() for l in iFile]
+		iFile.close()
+	except IOError:
+		SPIList = []
+	
+	
+	calledProgs = {}
+	for spi in SPIList[:]:
+		print("processing: "+spi)
+		calledProgs[spi] = " ".join(findCalledServices(spi))
+	
+	
+	
+	iFile = open(CONST.DATA+"SPIcalled.csv","w")
+	iFile.write("sep=;\n")
+	for k,v in calledProgs.items():
+		iFile.write(k+";"+v+";"+"\n")
+	iFile.close()
+		
+		
+getSPICalled()
 
