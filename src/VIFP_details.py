@@ -335,8 +335,10 @@ def getSPICalled():
 	calledProgs = {}
 	for spi in SPIList[:]:
 		print("processing: "+spi)
-		calledProgs[spi] = " ".join(findCalledServices(spi))
-	
+		try:
+			calledProgs[spi] = " ".join(findCalledServices(spi))
+		except KeyError:
+			print("module not found!!!! : "+spi)
 	
 	
 	iFile = open(CONST.DATA+"SPIcalled.csv","w")
